@@ -1874,7 +1874,6 @@ const headerActions = (
 
                 <button 
                   id="tour-sa-tab-history"
-                  id="tour-sa-history-tab"
                   className={`sa-sidebar-tab-btn ${activeSidebarView === 'history' ? 'active' : ''}`}
                   onClick={() => handleSidebarViewChange('history')} 
                 >
