@@ -1,0 +1,22 @@
+/* Shared dashboard stylesheet. Imports the Storm Master List rules, which themselves
+   pull in the variables file. Any additional global dashboard rules can go here. */
+@import "../MainApp/StormMasterList/SM_styles.css";
+
+/* =========================================================
+   Night Shift Dimmer
+   - JS toggles: body.night-shift-active
+   - Theme colors live with the Storm Master List styles.
+========================================================= */
+
+:root {
+  --night-dimmer-brightness: 1;
+  --night-dimmer-contrast: 1;
+  --night-dimmer-saturate: 1;
+  --night-dimmer-hue-rotate: 0deg;
+  --night-dimmer-sepia: 0;
+}
+
+body.night-shift-active .app-container {
+  filter: brightness(var(--night-dimmer-brightness));
+  transition: filter 180ms ease;
+}
