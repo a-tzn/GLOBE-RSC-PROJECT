@@ -12,99 +12,20 @@ export function extractBaseAndSuffix(nmsString) {
   "DVOC","DVOR","MISOR","MOR","MOCC","MOC","DNGT","CMGN","ZSIB","ZDN",
   "SKUD","MGDN","MGND","SCOT","NCOT","COT","SAR","AGN","LDN","LDS",
   "DDN","SDN","SDS","BUK","DDO","CVLY","AGS","DDS","BAS","SULU",
-  "TAWI","ZDS","GENSAN","DAVOR","ADN","BUKDN","SKDRAT"
-];
+  "TAWI","ZDS","GENSAN","DAVOR","ADN","BUKDN","SKDRAT","DDM"
+  ];
 
-const anchors2nd = ['TEMPO', 'ID', 'AS', '_D', 'COW', 'TEMP', 'EM', '-D', 'OD', 'IO', 'LS'];
-
-let matched = false;
-
-function findBestAnchor(str, anchors) {
-  let bestAnchor = null;
-  let bestIndex = -1;
-  let bestLength = -1;
-
-  for (const anchor of anchors) {
-    const idx = str.lastIndexOf(anchor);
-    if (idx === -1) continue;
-
-    const len = anchor.length;
-
-    if (
-      len > bestLength ||
-      (len === bestLength && idx > bestIndex)
-    ) {
-      bestAnchor = anchor;
-      bestIndex = idx;
-      bestLength = len;
-    }
-  }
-
-  return { bestAnchor, bestIndex };
-}
-
-const { bestAnchor, bestIndex } = findBestAnchor(originalStr, anchors);
-
-if (bestAnchor !== null) {
-  const anchor = bestAnchor;
-  let idx = bestIndex;
-
-  for (const secAnchor of anchors2nd) {
-    let secIdx = originalStr.indexOf(secAnchor, idx + anchor.length);
-
-    if (secIdx !== -1) {
-      let potentialSuffix = originalStr.slice(
-        idx + anchor.length + secAnchor.length
-      );
-
-      const isValidSuffix = /^[XYLFWKHVBMNPRT]*$/i.test(potentialSuffix);
-
-      if (isValidSuffix) {
-        suffixLetters = potentialSuffix;
-        displayBase = originalStr.slice(
-          0,
-          secIdx + secAnchor.length
-        );
-        matched = true;
-        break;
-      } else {
-        suffixLetters = "";
-        displayBase = originalStr.slice(
-          0,
-          secIdx + secAnchor.length
-        );
-        matched = true;
-        break;
-      }
-    }
-  }
-
-  if (!matched) {
-    let potentialSuffix = originalStr.slice(idx + anchor.length);
-    const isValidSuffix = /^[XYLFWKHVBMNPRT]*$/i.test(potentialSuffix);
-
-    if (isValidSuffix) {
-      suffixLetters = potentialSuffix;
-      displayBase = originalStr.slice(0, idx + anchor.length);
-      matched = true;
-    } else {
-      suffixLetters = "";
-      displayBase = originalStr.slice(0, idx + anchor.length);
-      matched = true;
-    }
-  }
-}
   const noprovanchor = [
-    "ADLAY","AGUSAN","ALEJAL","ALSON","BABAK",
+    "ADLAY","ASUNSI","AGUSAN","ALEJAL","ALSON","AMAYPACHOSP","BABAK",
     "BAGONTASVALN","BAGTAP","BALANGASAN","BALSIAORLY","BANALEPGDIAN",
     "BANGCUDMALAY","BANGKALPTKUL","BAROY","BGETABIAWAN","BIASONGDIPOL",
     "BINUAN","BLGIAN","BMORET","BNAWAN","BOALAN",
-    "BTIBOT","BULUAN","CARRAS","CAMPPH","CAMPUNOLAMIT",
+    "BTIBOT","BULUAN","CARRAS","CAMPPH","CAMPUNOLAMIT","CMUSP",
     "CANELR","CANTIL","CAWAY","CAWACAWAPOB","CIUDADMEDCTR",
     "CLARIN","COGONELSLVDR","COLUMB","CONCEPKORDAL","CPTOLSNJOSEDNGTLEGO",
     "DAGATKIDVALN","DAKAK","DANSLR","DARUL","DUGMAN",
     "EBENEZER","EPOL","FALCAT","FMARTK","FUENTEH",
-    "GFATIM","GICMAL","GLAMAN","GOVRAM","GPANAB",
+    "GFATIM","GICMAL","GLAMAN","GOVRAM","GPANAB","GVALEN","GTZAMBOFOC",
     "GRINOTACUR","GSILGN","GTAGUM","GUIHIN","HTLGUILLER",
     "IMPAL","INDUST","IPIL","ISLAJARDIN","ISULANCPITOL",
     "JAKART","JASAAN","JDLMAN","KATID","KABAN",
@@ -114,10 +35,10 @@ if (bestAnchor !== null) {
     "LANTAP","LAUM","LEBAK","LEEPL","LILOY",
     "LINABOMALAY","LLIBER","LONDON","LORENZOTAN","LOWDAN",
     "LUMBO2VALN","LUMBOVALN","LUUK","LUYAHN","MAMASP",
-    "MAASIM","MAGPET","MAGSAY","MAGSYM","MAGSAYPOLSCO",
+    "MAASIM","MAGPET","MAGSAY","MAGSYM","MAGSAYPOLSCO","MINEVENTNSB",
     "MAKAR","MALAYB","MANINGCOLOZM","MARANT","MARCOSPUTIK",
-    "MIDSAL","MLANGAIRPT","MLORET","MMAGSY","MMALIT",
-    "MMCOZAMISR","MONCKADMAR","MRAHAN","MTVIEWM","MURICAY",
+    "MIDSAL","MLANGAIRPT","MLORET","MMAGSY","MMALIT","MARAWIPOB",
+    "MMCOZAMISR","MONCKADMAR","MRAHAN","MTVIEWM","MURICAY","MALINAOSP",
     "MUSUAN","NAAWAN","NORTHPOBMARAM","OLUTAN","ORCHID",
     "P2BAGONTAAS","P24MABUHAY","PAGLAT","PALKAN","PANABO",
     "PANAON","PANPIL","PANTUK","PARIAN","PERSIN",
@@ -127,25 +48,157 @@ if (bestAnchor !== null) {
     "RCOLMB","RGLAN","RJDALM","RKALIL","RLBUAN",
     "RMAHAY","RMALIT","ROBGEN","ROBILIGAN1ID","ROBILIGAN2ID",
     "RPARAN","RSCLAR","RSNFER","RTALTAKGLAN","RTOMAR",
-    "RTUBUR","SALAY","SANGA2AIRPT","SANJOSMALAYB","SIAY",
+    "RTUBUR","SALAY","SANGA2AIRPT","SANJOSMALAYB","SIAY","SANTONIOTITAYZS",
     "SIOCON","SITANK","SMCBUTUAN1ID","SMCBUTUAN2ID","SMCKILIWST",
     "SMGEN","STAMARIARLY","STCLAR","STHSQR","STMARIPGDIAN",
-    "STONIN","SUBIAN","SULIT","SURALL","SYDNEYHOTEL",
+    "STONIN","SUBIAN","SULIT","SURALL","SYDNEYHOTEL","SAGONSONGAN",
     "TAGLATAWAN","TALISY","TALITAY","TAMBER","TAMBUL",
     "TAMPAK","TAMPAR","TAMPIL","TANDAGAIRPT","TANDUB",
     "TANTAN","TAVIRAN","TBURAN","TETUAN","TIGBAW",
     "TITAY","TOPLAH","TUBRAN","TUGBUN","TUKARLY",
     "TUKASKUD","TUNGAW","UCALER","VERANZAMALL","VILLAN",
     "WESMINCOM","ZDNPH"];
-    
-  const nomatchanchor = ['_D', 'COW', 'TEMPO', 'TEMP', '-D'];
+
+  const anchors2nd = ['TEMPO', 'ID', 'AS', '_D', 'COW', 'TEMP', 'EM', '-D', 'OD', 'IO', 'LS', 'LEGO','PH'];
+
+  let matched = false;
+
+  function findBestAnchor(str, anchors) {
+  str = str.toUpperCase();
+
+  // longest -> shortest
+  const sortedAnchors = [...anchors].sort(
+    (a, b) => b.length - a.length
+  );
+
+  let bestAnchor = null;
+  let bestIndex = -1;
+
+  let bestMatched = null;
+  let bestMatchedIndex = -1;
+  let bestMatchedLength = -1;
+
+  for (const anchor of sortedAnchors) {
+    const upperAnchor = anchor.toUpperCase();
+    const idx = str.lastIndexOf(upperAnchor);
+
+    if (idx === -1) continue;
+
+    // FARTHEST-RIGHT MATCH
+    if (idx > bestIndex) {
+      bestAnchor = anchor;
+      bestIndex = idx;
+    }
+
+    // LONGEST MATCH
+    if (upperAnchor.length > bestMatchedLength) {
+      bestMatched = anchor;
+      bestMatchedIndex = idx;
+      bestMatchedLength = upperAnchor.length;
+    }
+  }
+
+  return {
+    bestAnchor,
+    bestIndex,
+    bestMatched,
+    bestMatchedIndex,
+    bestMatchedLength
+  };
+}
+
+  const firstanchor = findBestAnchor(originalStr, anchors);
+  const secondanchor = findBestAnchor(originalStr, noprovanchor);
 
   let found = false;
+  let decisionAnchor = false;
 
-  if (!matched) {
-    for (const anchor of nomatchanchor) {
-      let idx = originalStr.lastIndexOf(anchor);
-      if (idx !== -1) {
+  if (firstanchor.bestAnchor !== null && secondanchor.bestAnchor !== null) {
+    if (secondanchor.bestMatchedIndex < firstanchor.bestIndex && secondanchor.bestMatchedLength > firstanchor.bestIndex) {
+      decisionAnchor = true;
+    }
+
+    if (!decisionAnchor) {
+      const anchor = firstanchor.bestAnchor;
+      let idx = firstanchor.bestIndex;
+
+      for (const secAnchor of anchors2nd) {
+        let secIdx = originalStr.indexOf(secAnchor, idx + anchor.length);
+
+        if (secIdx !== -1) {
+          let potentialSuffix = originalStr.slice(
+            idx + anchor.length + secAnchor.length
+          );
+
+          const isValidSuffix = /^[XYLFWKHVBMNPRT]*$/i.test(potentialSuffix);
+
+          if (isValidSuffix) {
+            suffixLetters = potentialSuffix;
+            displayBase = originalStr.slice(
+              0,
+              secIdx + secAnchor.length
+            );
+            matched = true;
+            break;
+          } else {
+            suffixLetters = "";
+            displayBase = originalStr.slice(
+              0,
+              secIdx + secAnchor.length
+            );
+            matched = true;
+            break;
+          }
+        }
+      }
+
+      if (!matched) {
+        let potentialSuffix = originalStr.slice(idx + anchor.length);
+        const isValidSuffix = /^[XYLFWKHVBMNPRT]*$/i.test(potentialSuffix);
+
+        if (isValidSuffix) {
+          suffixLetters = potentialSuffix;
+          displayBase = originalStr.slice(0, idx + anchor.length);
+        } else {
+          suffixLetters = "";
+          displayBase = originalStr.slice(0, idx + anchor.length);
+        }
+      }
+    } else {
+      const anchor = secondanchor.bestMatched;
+      let idx = secondanchor.bestMatchedIndex;
+
+      for (const secAnchor of anchors2nd) {
+        let secIdx = originalStr.indexOf(secAnchor, idx + anchor.length);
+
+        if (secIdx !== -1) {
+          let potentialSuffix = originalStr.slice(
+            idx + anchor.length + secAnchor.length
+          );
+
+          const isValidSuffix = /^[XYLFWKHVBMNPRT]*$/i.test(potentialSuffix);
+
+          if (isValidSuffix) {
+            suffixLetters = potentialSuffix;
+            displayBase = originalStr.slice(
+              0,
+              secIdx + secAnchor.length
+            );
+            found = true;
+            break;
+          } else {
+            suffixLetters = "";
+            displayBase = originalStr.slice(
+              0,
+              secIdx + secAnchor.length
+            );
+            found = true;
+            break;
+          }
+        }
+      }
+
+      if (!found) {
         let potentialSuffix = originalStr.slice(idx + anchor.length);
         const isValidSuffix = /^[XYLFWKHVBMNPRT]*$/i.test(potentialSuffix);
 
@@ -153,29 +206,128 @@ if (bestAnchor !== null) {
           suffixLetters = potentialSuffix;
           displayBase = originalStr.slice(0, idx + anchor.length);
           found = true;
-          break;
-        }else {
+        } else {
           suffixLetters = "";
           displayBase = originalStr.slice(0, idx + anchor.length);
+          found = true;
+        }
+      }
+    }
+  }
+
+  else if (firstanchor.bestAnchor !== null && secondanchor.bestMatched === null) {
+    const anchor = firstanchor.bestAnchor;
+    let idx = firstanchor.bestIndex;
+
+    for (const secAnchor of anchors2nd) {
+      let secIdx = originalStr.indexOf(secAnchor, idx + anchor.length);
+
+      if (secIdx !== -1) {
+        let potentialSuffix = originalStr.slice(
+          idx + anchor.length + secAnchor.length
+        );
+
+        const isValidSuffix = /^[XYLFWKHVBMNPRT]*$/i.test(potentialSuffix);
+
+        if (isValidSuffix) {
+          suffixLetters = potentialSuffix;
+          displayBase = originalStr.slice(
+            0,
+            secIdx + secAnchor.length
+          );
+          matched = true;
+          break;
+        } else {
+          suffixLetters = "";
+          displayBase = originalStr.slice(
+            0,
+            secIdx + secAnchor.length
+          );
+          matched = true;
+          break;
+        }
+      }
+    }
+
+    if (!matched) {
+      let potentialSuffix = originalStr.slice(idx + anchor.length);
+      const isValidSuffix = /^[XYLFWKHVBMNPRT]*$/i.test(potentialSuffix);
+
+      if (isValidSuffix) {
+        suffixLetters = potentialSuffix;
+        displayBase = originalStr.slice(0, idx + anchor.length);
+      } else {
+        suffixLetters = "";
+        displayBase = originalStr.slice(0, idx + anchor.length);
+      }
+    }
+  }
+
+  else if (secondanchor.bestMatched !== null && firstanchor.bestAnchor === null) {
+    const anchor = secondanchor.bestMatched;
+    let idx = secondanchor.bestMatchedIndex;
+
+    for (const secAnchor of anchors2nd) {
+      let secIdx = originalStr.indexOf(secAnchor, idx + anchor.length);
+
+      if (secIdx !== -1) {
+        let potentialSuffix = originalStr.slice(
+          idx + anchor.length + secAnchor.length
+        );
+
+        const isValidSuffix = /^[XYLFWKHVBMNPRT]*$/i.test(potentialSuffix);
+
+        if (isValidSuffix) {
+          suffixLetters = potentialSuffix;
+          displayBase = originalStr.slice(
+            0,
+            secIdx + secAnchor.length
+          );
+          found = true;
+          break;
+        } else {
+          suffixLetters = "";
+          displayBase = originalStr.slice(
+            0,
+            secIdx + secAnchor.length
+          );
           found = true;
           break;
         }
       }
     }
+
     if (!found) {
-      let fallbackMatch = originalStr.match(/([-_ ]*)((?:ID|AS|[XYLFWKHVBMNPRT])+ )$/i);
-      if (!fallbackMatch) {
-        fallbackMatch = originalStr.match(/([-_ ]*)((?:ID|AS|[XYLFWKHVBMNPRT])+ )$/i); // fallback pattern if needed
-      }
-      fallbackMatch = originalStr.match(/([-_ ]*)((?:ID|AS|[XYLFWKHVBMNPRT])+)$/i);
-      if (fallbackMatch) {
-        let separator = fallbackMatch[1];
-        let actualSuffix = fallbackMatch[2];
-        displayBase = originalStr.slice(0, -fallbackMatch[0].length) + separator;
-        suffixLetters = actualSuffix;
+      let potentialSuffix = originalStr.slice(idx + anchor.length);
+      const isValidSuffix = /^[XYLFWKHVBMNPRT]*$/i.test(potentialSuffix);
+
+      if (isValidSuffix) {
+        suffixLetters = potentialSuffix;
+        displayBase = originalStr.slice(0, idx + anchor.length);
+        found = true;
+      } else {
+        suffixLetters = "";
+        displayBase = originalStr.slice(0, idx + anchor.length);
+        found = true;
       }
     }
   }
+  
+  else {
+    let fallbackMatch = originalStr.match(/([-_ ]*)((?:[XYLFWKHVBMNPRT])+ )$/i);
+    if (!fallbackMatch) {
+      fallbackMatch = originalStr.match(/([-_ ]*)((?:[XYLFWKHVBMNPRT])+ )$/i); // fallback pattern if needed
+    }
+    fallbackMatch = originalStr.match(/([-_ ]*)((?:[XYLFWKHVBMNPRT])+)$/i);
+    if (fallbackMatch) {
+      let separator = fallbackMatch[1];
+      let actualSuffix = fallbackMatch[2];
+      displayBase = originalStr.slice(0, -fallbackMatch[0].length) + separator;
+      suffixLetters = actualSuffix;
+    }
+  }
+  
+
   let cleanBase = displayBase.replace(/[^A-Z0-9]/g, '');
 
   return {
@@ -318,7 +470,7 @@ export function processCSVComparison(nmsText, udmText) {
 
       var rawName = String(udmData[j][udmNameIdx] || '');
       var rawTechName = String(udmData[j][udmTechIdx] || '');
-      var grouptechname = rawTechName.slice("/");
+      var grouptechname = rawTechName.split("/");
       var plaId = udmIdIdx > -1 ? String(udmData[j][udmIdIdx] || '').trim() : 'UNKNOWN_ID_' + j;
 
       var cleanedName = rawName.toUpperCase().replace(/[\s\uFEFF\xA0]/g, '');
