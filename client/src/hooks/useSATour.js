@@ -9,6 +9,28 @@ const API_DEV_PROXY_PATH = import.meta.env.VITE_GAS_DEV_PROXY_PATH || '/api/gas'
 const FORCE_DIRECT_GAS = String(import.meta.env.VITE_GAS_FORCE_DIRECT || '').toLowerCase() === 'true';
 
 async function postTourAction(payload) {
+  // 1. Live Environment: Use native google.script.run to bypass iframe/CORS issues
+  if (typeof google !== 'undefined' && google.script && google.script.run) {
+    return new Promise((resolve, reject) => {
+      const runner = google.script.run
+        .withSuccessHandler((response) => {
+          if (!response?.success) reject(new Error(response?.error || 'Tour request failed'));
+          else resolve(response);
+        })
+        .withFailureHandler((err) => reject(err));
+
+      // Route the action directly to your existing code.gs functions
+      if (payload.action === 'getTourStatus') {
+        runner.getTourStatus(payload.authContext);
+      } else if (payload.action === 'completeTour') {
+        runner.completeUserTour(payload.authContext, payload.tourType);
+      } else {
+        reject(new Error('Unknown tour action: ' + payload.action));
+      }
+    });
+  }
+
+  // 2. Local Environment: Fallback to HTTP fetch
   const shouldUseDevProxy = import.meta.env.DEV && !FORCE_DIRECT_GAS;
   const endpoint = shouldUseDevProxy ? API_DEV_PROXY_PATH : API_BASE_URL;
   const response = await fetch(endpoint, {
@@ -23,10 +45,23 @@ async function postTourAction(payload) {
   return data;
 }
 
+function isCompletedFlag(value) {
+  if (value === true) return true;
+  if (value === false || value == null) return false;
+  if (typeof value === 'number') return value === 1;
+  const normalized = String(value).trim().toLowerCase();
+  return normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'done' || normalized === 'completed';
+}
+
+function hasActiveDriver(driverInstance) {
+  return typeof driverInstance?.isActive === 'function' ? driverInstance.isActive() : false;
+}
+
 export const useSATour = (authContext = null, setActiveTab = null) => {
   const [tourCompleted, setTourCompleted] = useState(true);
   const [tourEligible, setTourEligible] = useState(false);
   const driverRef = useRef(null);
+  const autoStartedRef = useRef(false);
 
   const buildDriver = useCallback(() => {
     let settleTimer = null;
@@ -567,7 +602,7 @@ export const useSATour = (authContext = null, setActiveTab = null) => {
 
   const startTour = useCallback(() => {
     const start = async () => {
-      if (driverRef.current?.isActive()) return;
+      if (hasActiveDriver(driverRef.current)) return;
       const started = Date.now();
       while (window.__SA_TOUR_WAIT_FOR_DATA__ === true && Date.now() - started < 5000) {
         await new Promise((resolve) => setTimeout(resolve, 120));
@@ -576,8 +611,14 @@ export const useSATour = (authContext = null, setActiveTab = null) => {
         setActiveTab('input');
         await new Promise((resolve) => setTimeout(resolve, 180));
       }
-      if (!driverRef.current) driverRef.current = buildDriver();
-      driverRef.current.drive();
+      try {
+        if (!driverRef.current) driverRef.current = buildDriver();
+        driverRef.current.drive();
+      } catch (error) {
+        console.error('Failed to start SA tour:', error);
+        driverRef.current = null;
+        autoStartedRef.current = false;
+      }
     };
     void start();
   }, [buildDriver, setActiveTab]);
@@ -586,8 +627,7 @@ export const useSATour = (authContext = null, setActiveTab = null) => {
     const checkStatus = async () => {
       try {
         const res = await postTourAction({ action: 'getTourStatus', authContext });
-        // Note: Assuming 'saTourCompleted' is available, otherwise this will gracefully fall back.
-        const completed = res?.data?.saTourCompleted === true; 
+        const completed = isCompletedFlag(res?.data?.saTourCompleted);
         setTourCompleted(completed);
         setTourEligible(!completed);
       } catch (error) {
@@ -599,7 +639,9 @@ export const useSATour = (authContext = null, setActiveTab = null) => {
 
   useEffect(() => {
     if (!tourEligible || tourCompleted) return;
-    if (driverRef.current?.isActive()) return;
+    if (hasActiveDriver(driverRef.current)) return;
+    if (autoStartedRef.current) return;
+    autoStartedRef.current = true;
     const timer = setTimeout(() => {
       startTour();
     }, 500);

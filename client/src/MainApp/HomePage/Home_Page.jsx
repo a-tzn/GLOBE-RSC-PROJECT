@@ -3,7 +3,7 @@ import "./HP_styles.css";
 import globeLogo from "../../assets/Globe_LogoB.png";
 import { useNavigate } from "react-router-dom";
 import LoadingScreen from "../../components/LoadingScreen";
-import { getUserInfo } from "../../services/googleAppsScript";
+import { getUserInfo, touchUserAccess } from "../../services/googleAppsScript";
 
 function HomePage() {
   const navigate = useNavigate();
@@ -11,6 +11,9 @@ function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
+    touchUserAccess().catch(() => {
+      // Best effort access tracking on app entry.
+    });
     getUserInfo().catch(() => {
       // Best effort prefetch for faster user identity rendering on dashboards.
     });

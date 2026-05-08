@@ -87,13 +87,17 @@ function doPost(e) {
       case 'getUserInfo':
         response = getUserInfo(authContext);
         break;
+
+      case 'touchUserAccess':
+        response = touchUserAccess(authContext);
+        break;
         
       case 'getTourStatus':
         response = getTourStatus(authContext);
         break;
 
       case 'completeTour':
-        response = completeUserTour(authContext);
+        response = completeUserTour(authContext, request.tourType);
         break;
 
       case 'getLastModified':
@@ -606,7 +610,7 @@ function initializeSpreadsheet() {
     const sheetConfigs = [
       { name: getSheetName('SM'), headers: ['id', 'userId', 'uploadDate', 'fileName', 'dataType', 'rawDataId', 'processedDataId', 'metadata'] },
       { name: getSheetName('SA'), headers: ['id', 'userId', 'uploadDate', 'fileName', 'dataType', 'rawDataId', 'processedDataId', 'metadata'] },
-      { name: CONFIG.USERS_SHEET_NAME, headers: ['userId', 'name', 'displayName', 'lastAccess', 'uploadCount', 'smTourCompleted'] },
+      { name: CONFIG.USERS_SHEET_NAME, headers: ['userId', 'name', 'displayName', 'lastAccess', 'uploadCount', 'smTourCompleted', 'saTourCompleted'] },
       { name: CONFIG.LAST_MODIFIED_SHEET_NAME, headers: ['timestamp', 'userId', 'userName', 'userDisplayName', 'action', 'fileName', 'dataType', 'details'] }
     ];
 
@@ -629,12 +633,53 @@ function updateUserStats(userId, name, displayName, spreadsheet) {
     }
     const now = new Date().toISOString();
     if (rowIndex === -1) {
-      sheet.appendRow([userId, name, displayName, now, 1, false]);
+      sheet.appendRow([userId, name, displayName, now, 1, false, false]);
     } else {
       const currentCount = Number(data[rowIndex - 1][4] || 0);
       sheet.getRange(rowIndex, 2, 1, 4).setValues([[name, displayName, now, currentCount + 1]]);
     }
   } catch (e) {}
+}
+
+function touchUserAccess(authContext) {
+  try {
+    const userInfoRes = getUserInfo(authContext);
+    if (!userInfoRes.success) return userInfoRes;
+
+    const userInfo = userInfoRes.data || {};
+    const userId = String(userInfo.userId || '').trim();
+    if (!userId) return { success: false, error: 'Missing user identity' };
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(CONFIG.USERS_SHEET_NAME);
+    if (!sheet) return { success: false, error: 'Users sheet not found' };
+
+    const columnMap = getUsersColumnMap(sheet);
+    const data = sheet.getDataRange().getValues();
+    let rowIndex = -1;
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][columnMap.userid] || '').trim() === userId) {
+        rowIndex = i + 1;
+        break;
+      }
+    }
+
+    const now = new Date().toISOString();
+    const safeName = String(userInfo.name || userId.split('@')[0] || 'Anonymous');
+    const safeDisplayName = String(userInfo.displayName || formatDisplayName(safeName) || 'Guest');
+
+    if (rowIndex === -1) {
+      sheet.appendRow(createDefaultUserRow({ userId, name: safeName, displayName: safeDisplayName }, now, columnMap));
+    } else {
+      sheet.getRange(rowIndex, columnMap.name + 1).setValue(safeName);
+      sheet.getRange(rowIndex, columnMap.displayname + 1).setValue(safeDisplayName);
+      sheet.getRange(rowIndex, columnMap.lastaccess + 1).setValue(now);
+    }
+
+    return { success: true, data: { userId, lastAccess: now } };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
 }
 
 function updateLastModified(userId, userName, userDisplayName, fileName, dataType, action, details, spreadsheet) {
@@ -732,6 +777,51 @@ function getLatestUserUploadedData(dataType, authContext) {
 
 // 7. TOUR GUIDE ENGINE
 
+function parseTourCompleted(value) {
+  if (value === true) return true;
+  if (value === false || value === null || value === undefined) return false;
+  if (typeof value === 'number') return value === 1;
+  const normalized = String(value).trim().toLowerCase();
+  return normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'done' || normalized === 'completed';
+}
+
+function getUsersColumnMap(sheet) {
+  const requiredHeaders = ['userId', 'name', 'displayName', 'lastAccess', 'uploadCount', 'smTourCompleted', 'saTourCompleted'];
+  if (sheet.getLastRow() === 0) {
+    sheet.getRange(1, 1, 1, requiredHeaders.length).setValues([requiredHeaders]);
+  }
+
+  const lastColumn = Math.max(sheet.getLastColumn(), requiredHeaders.length);
+  const headers = sheet.getRange(1, 1, 1, lastColumn).getValues()[0].map((header) => String(header || '').trim());
+
+  requiredHeaders.forEach((header) => {
+    const exists = headers.some((existing) => existing.toLowerCase() === header.toLowerCase());
+    if (!exists) {
+      sheet.getRange(1, sheet.getLastColumn() + 1).setValue(header);
+      headers.push(header);
+    }
+  });
+
+  const map = {};
+  headers.forEach((header, index) => {
+    const key = String(header || '').trim().toLowerCase();
+    if (key) map[key] = index;
+  });
+  return map;
+}
+
+function createDefaultUserRow(userInfo, now, columnMap) {
+  const row = [];
+  row[columnMap.userid] = userInfo.userId;
+  row[columnMap.name] = userInfo.name;
+  row[columnMap.displayname] = userInfo.displayName;
+  row[columnMap.lastaccess] = now;
+  row[columnMap.uploadcount] = 0;
+  row[columnMap.smtourcompleted] = false;
+  row[columnMap.satourcompleted] = false;
+  return row;
+}
+
 function getTourStatus(authContext) {
   try {
     const userInfoRes = getUserInfo(authContext);
@@ -739,21 +829,33 @@ function getTourStatus(authContext) {
 
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(CONFIG.USERS_SHEET_NAME);
-    if (!sheet) return { success: true, data: { smTourCompleted: false } };
-    
+    if (!sheet) return { success: true, data: { smTourCompleted: false, saTourCompleted: false } };
+
+    const columnMap = getUsersColumnMap(sheet);
     const data = sheet.getDataRange().getValues();
+    const userId = String(userInfoRes.data.userId || '').trim();
     for (let i = 1; i < data.length; i++) {
-      if (data[i][0] === userInfoRes.data.userId) {
-        return { success: true, data: { smTourCompleted: data[i][5] === true || data[i][5] === 'true' } };
+      if (String(data[i][columnMap.userid] || '').trim() === userId) {
+        const rawSm = data[i][columnMap.smtourcompleted];
+        const rawSa = data[i][columnMap.satourcompleted];
+        return { success: true, data: {
+          smTourCompleted: parseTourCompleted(rawSm),
+          saTourCompleted: parseTourCompleted(rawSa),
+          rawSmTourCompleted: rawSm,
+          rawSaTourCompleted: rawSa
+        } };
       }
     }
-    return { success: true, data: { smTourCompleted: false } };
+
+    const now = new Date().toISOString();
+    sheet.appendRow(createDefaultUserRow(userInfoRes.data, now, columnMap));
+    return { success: true, data: { smTourCompleted: false, saTourCompleted: false, rawSmTourCompleted: false, rawSaTourCompleted: false } };
   } catch (e) {
     return { success: false, error: e.message };
   }
 }
 
-function completeUserTour(authContext) {
+function completeUserTour(authContext, tourType) {
   const lock = LockService.getScriptLock();
   let lockAcquired = false;
   try {
@@ -767,17 +869,23 @@ function completeUserTour(authContext) {
     const sheet = ss.getSheetByName(CONFIG.USERS_SHEET_NAME);
     if (!sheet) return { success: false, error: 'Users sheet not found' };
 
+    const columnMap = getUsersColumnMap(sheet);
     const data = sheet.getDataRange().getValues();
     let rowIndex = -1;
+    const userId = String(userInfoRes.data.userId || '').trim();
     for (let i = 1; i < data.length; i++) {
-      if (data[i][0] === userInfoRes.data.userId) { rowIndex = i + 1; break; }
+      if (String(data[i][columnMap.userid] || '').trim() === userId) { rowIndex = i + 1; break; }
     }
 
     const now = new Date().toISOString();
+    const isSM = tourType !== 'SA';
+    const colToUpdate = (isSM ? columnMap.smtourcompleted : columnMap.satourcompleted) + 1;
     if (rowIndex === -1) {
-      sheet.appendRow([userInfoRes.data.userId, userInfoRes.data.name, userInfoRes.data.displayName, now, 0, true]);
+      const newRow = createDefaultUserRow(userInfoRes.data, now, columnMap);
+      newRow[isSM ? columnMap.smtourcompleted : columnMap.satourcompleted] = true;
+      sheet.appendRow(newRow);
     } else {
-      sheet.getRange(rowIndex, 6).setValue(true);
+      sheet.getRange(rowIndex, colToUpdate).setValue(true);
     }
     return { success: true, message: 'Tour status updated' };
   } catch (e) { return { success: false, error: e.message };

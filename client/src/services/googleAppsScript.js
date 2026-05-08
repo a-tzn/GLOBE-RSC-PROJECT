@@ -302,6 +302,26 @@ export function getCachedUserInfo() {
 }
 
 /**
+ * Register user access in USERS sheet without incrementing upload counters.
+ */
+export function touchUserAccess() {
+  const runner = getGoogleScriptRunner();
+
+  if (runner) {
+    return promisifyGasCall('touchUserAccess')
+      .then((result) => {
+        if (!result.success) throw new Error(result.error || 'Failed to update user access');
+        return result.data;
+      });
+  }
+
+  return postApi({ action: 'touchUserAccess' }).then((data) => {
+    if (!data.success) throw new Error(data.error || 'Failed to update user access');
+    return data.data;
+  });
+}
+
+/**
  * Get last modified information (dashboard-level)
  */
 export function getLastModifiedInfo(dataType = '') {

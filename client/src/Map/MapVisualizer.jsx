@@ -233,6 +233,9 @@ const createCustomClusterIcon = (cluster) => {
 // 🔁 Map recenter logic (unchanged)
 function MapRecenter({ expanded, processedData = [], selectedSite = {}, provinceBounds = null }) {
   const map = useMap();
+  const selectedLat = Number.parseFloat(selectedSite?.lat);
+  const selectedLng = Number.parseFloat(selectedSite?.lng);
+  const hasSelectedCoords = Number.isFinite(selectedLat) && Number.isFinite(selectedLng);
 
   const bounds = useMemo(() => {
     const pts = [];
@@ -246,14 +249,14 @@ function MapRecenter({ expanded, processedData = [], selectedSite = {}, province
 
   useEffect(() => {
     map.invalidateSize();
-    if (selectedSite.lat && selectedSite.lng) {
-      map.flyTo([parseFloat(selectedSite.lat), parseFloat(selectedSite.lng)], 18, { animate: true, duration: 1 });
+    if (hasSelectedCoords) {
+      map.flyTo([selectedLat, selectedLng], 18, { animate: true, duration: 1 });
     } else if (provinceBounds) {
       map.fitBounds(provinceBounds, { padding: [70, 70] });
     } else if (bounds) {
       map.fitBounds(bounds, { padding: [60, 60] });
     }
-  }, [selectedSite.lat, selectedSite.lng, bounds, provinceBounds, expanded, map]);
+  }, [hasSelectedCoords, selectedLat, selectedLng, bounds, provinceBounds, expanded, map]);
 
   return null;
 }
@@ -285,6 +288,9 @@ const normalizeProvinceName = (value) => {
 // 🔥 MAIN COMPONENT
 function MapVisualizer({ selectedSite = {}, selectedProvince = null, filteredResults = [], isExpanded = false }) {
   const deferredFilteredResults = useDeferredValue(filteredResults);
+  const selectedLat = Number.parseFloat(selectedSite?.lat);
+  const selectedLng = Number.parseFloat(selectedSite?.lng);
+  const hasSelectedCoords = Number.isFinite(selectedLat) && Number.isFinite(selectedLng);
   const mindanaoFeatureCollection = useMemo(() => {
     try {
       const parsed = JSON.parse(mindanaoAdm2Raw);
@@ -304,7 +310,7 @@ function MapVisualizer({ selectedSite = {}, selectedProvince = null, filteredRes
     });
 
     return deferredFilteredResults
-      .filter(s => s.lat && s.lng)
+      .filter((s) => Number.isFinite(Number.parseFloat(s?.lat)) && Number.isFinite(Number.parseFloat(s?.lng)))
       .map((s, idx) => ({
         ...s,
         originalIndex: idx,
@@ -315,15 +321,15 @@ function MapVisualizer({ selectedSite = {}, selectedProvince = null, filteredRes
   }, [deferredFilteredResults]);
 
   const [centreLat, centreLng] = useMemo(() => {
-    if (selectedSite.lat && selectedSite.lng) return [parseFloat(selectedSite.lat), parseFloat(selectedSite.lng)];
+    if (hasSelectedCoords) return [selectedLat, selectedLng];
     if (processedData.length > 0) {
       const sum = processedData.reduce((acc, curr) => [acc[0] + curr.latNum, acc[1] + curr.lngNum], [0, 0]);
       return [sum[0] / processedData.length, sum[1] / processedData.length];
     }
     return [7.1907, 125.4553];
-  }, [selectedSite.lat, selectedSite.lng, processedData]);
+  }, [hasSelectedCoords, selectedLat, selectedLng, processedData]);
 
-  const currentZoom = selectedSite.lat ? 18 : (isExpanded ? 15 : 10);
+  const currentZoom = hasSelectedCoords ? 18 : (isExpanded ? 15 : 10);
   const provinceOutlineGeoJson = useMemo(() => {
     if (!selectedProvince || !mindanaoFeatureCollection) return null;
     const selectedKey = normalizeProvinceName(selectedProvince);
@@ -422,9 +428,9 @@ function MapVisualizer({ selectedSite = {}, selectedProvince = null, filteredRes
         })}
       </MarkerClusterGroup>
 
-      {selectedSite.lat && (
+      {hasSelectedCoords && (
         <Marker 
-          position={[parseFloat(selectedSite.lat), parseFloat(selectedSite.lng)]}
+          position={[selectedLat, selectedLng]}
           icon={getCustomIcon(selectedSite.matchStatus || 'UNCHANGED', true, 1)}
           zIndexOffset={1000}
         >

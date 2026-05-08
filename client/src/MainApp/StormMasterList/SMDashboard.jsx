@@ -1306,7 +1306,19 @@ export default function SMDashboard() {
         onClick={() => {
           const lat = parseFloat(row.lat);
           const lng = parseFloat(row.lng);
-          const nextSite = { lat, lng, id: row.plaId, baseLocation: row.baseLocation, nmsName: row.nmsName, zoom: 18 };
+          const hasValidCoordinates = Number.isFinite(lat) && Number.isFinite(lng);
+          const nextSite = hasValidCoordinates
+            ? {
+                lat,
+                lng,
+                id: row.plaId,
+                baseLocation: row.baseLocation,
+                nmsName: row.nmsName,
+                matchStatus: row.matchStatus,
+                index: resultIndex,
+                zoom: 18
+              }
+            : null;
 
           setSelectedRowDetails((prev) => (prev === row ? prev : row));
           setSelectedProvince(null);
@@ -1319,6 +1331,7 @@ export default function SMDashboard() {
           }
           rowSelectionRafRef.current = requestAnimationFrame(() => {
             setSelectedSite((prev) => {
+              if (!nextSite) return prev;
               const sameId = prev?.id === nextSite.id;
               const sameName = prev?.nmsName === nextSite.nmsName;
               const sameLat = Number(prev?.lat) === Number(nextSite.lat);
