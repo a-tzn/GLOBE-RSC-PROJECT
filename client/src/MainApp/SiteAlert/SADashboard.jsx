@@ -1,4 +1,4 @@
-﻿﻿import { useState, useMemo, useEffect, useRef, useDeferredValue } from 'react';
+﻿﻿﻿﻿import { useState, useMemo, useEffect, useRef, useDeferredValue } from 'react';
 import localforage from 'localforage';
 import useDarkMode from '../../hooks/useDarkMode';
 import useSearchDebounce from '../../hooks/useSearchDebounce';
@@ -96,8 +96,10 @@ function buildAxisTicks(maxValue, step) {
 
 export default function SADashboard() {
   const createModeState = (value) => ({ wireless: value, transport: value });
-  const [monitorFile1, setMonitorFile1] = useState(null); 
-  const [monitorFile2, setMonitorFile2] = useState(null); 
+  const [monitorFilesByMode, setMonitorFilesByMode] = useState(() => ({
+    wireless: { file1: null, file2: null },
+    transport: { file1: null, file2: null }
+  }));
   const [isLoading, setIsLoading] = useState(false);
   const [isStoredDataLoading, setIsStoredDataLoading] = useState(false);
   const [isInitialDataLoading, setIsInitialDataLoading] = useState(true);
@@ -245,6 +247,8 @@ export default function SADashboard() {
   const cacheMetaKey = `${cacheKey}_meta`;
   const cacheDataKey = `${cacheKey}_full`;
   const notifications = notificationsByMode[dashboardMode] || [];
+  const monitorFile1 = monitorFilesByMode[dashboardMode]?.file1 || null;
+  const monitorFile2 = monitorFilesByMode[dashboardMode]?.file2 || null;
   const activeLoadedRecordId = activeLoadedRecordIdByMode[dashboardMode] || null;
   const pendingIncomingRecord = pendingIncomingRecordByMode[dashboardMode] || null;
   const showIncomingBanner = showIncomingBannerByMode[dashboardMode] || false;
@@ -757,8 +761,6 @@ useEffect(() => {
     setSelectedRowDetails(null);
     setSearchTerm("");
     setSelectedGraphAlarm(null);
-    setMonitorFile1(null);
-    setMonitorFile2(null);
     handleSidebarViewChange('input');
     setModalSearchTerm("");
     setDrillDownData(null);
@@ -768,9 +770,16 @@ useEffect(() => {
     if (monitorFile2Ref.current) monitorFile2Ref.current.value = '';
   };
 
-  const handleFileChange = (e, setFileState) => {
+  const handleFileChange = (e, fileKey) => {
     const file = e.target.files[0];
-    if (file) setFileState(file);
+    if (!file) return;
+    setMonitorFilesByMode((prev) => ({
+      ...prev,
+      [dashboardMode]: {
+        ...(prev[dashboardMode] || { file1: null, file2: null }),
+        [fileKey]: file
+      }
+    }));
   };
 
   const readUniversalFile = (file) => {
@@ -871,7 +880,7 @@ useEffect(() => {
         setExpectedResultCount(safeProcessedData.length);
         setIsFullDataLoaded(true);
         setPersistedSummaryStats(summaryStats);
-        handleSidebarViewCHange('input');
+        handleSidebarViewChange('input');
         setIsSidebarCollapsed(false);
         addNotification({
           mode: dashboardMode,
@@ -1722,7 +1731,7 @@ useEffect(() => {
 const exportOptions = [
   { label: 'Full Export', value: 'ALL' }
 ];
-const { startTour } = useSATour(null, handleSidebarViewChange);
+const { startTour } = useSATour(userInfo, handleSidebarViewChange);
 const headerActions = (
   <DashboardHeaderActions
     lastModifiedText={lastModifiedName ? `${lastModifiedTimestamp} | ${lastModifiedName}` : lastModifiedTimestamp}
@@ -1902,11 +1911,11 @@ const headerActions = (
                     </div>
 
                     <div className="upload-group" id="tour-sa-upload-section">
-                      <span className="input-label">NMS File</span>
+                      <span className="input-label">{dashboardMode === 'wireless' ? 'NMS Wireless Alarms' : 'NMS Transport Alarms'}</span>
                       <div className="file-drop-area">
                         <img src={isDarkMode ? fileDark : fileLight} className="upload-icon" alt="icon" style={{ width: '20px' }} />
                         <span className="file-msg" style={{ marginTop: '8px' }}>{monitorFile1 ? monitorFile1.name : "Drag .xlsx, .xls, or .csv"}</span>
-                        <input className="file-input" type="file" accept=".csv, .xlsx, .xls" onChange={(e) => handleFileChange(e, setMonitorFile1)} ref={monitorFile1Ref} />
+                        <input className="file-input" type="file" accept=".csv, .xlsx, .xls" onChange={(e) => handleFileChange(e, 'file1')} ref={monitorFile1Ref} />
                       </div>
                     </div>
                     <div className="upload-group" style={{
@@ -1917,11 +1926,11 @@ const headerActions = (
                       transition: 'max-height 0.45s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s ease, margin-top 0.35s ease',
                       pointerEvents: isWirelessMode ? 'auto' : 'none'
                     }}>
-                      <span className="input-label">SA MASTERLIST File</span>
+                      <span className="input-label">Site Masterlist File</span>
                       <div className="file-drop-area">
                         <img src={isDarkMode ? fileDark : fileLight} className="upload-icon" alt="icon" style={{ width: '20px' }} />
                         <span className="file-msg" style={{ marginTop: '8px' }}>{monitorFile2 ? monitorFile2.name : "Drag .xlsx, .xls, or .csv"}</span>
-                        <input className="file-input" type="file" accept=".csv, .xlsx, .xls" onChange={(e) => handleFileChange(e, setMonitorFile2)} ref={monitorFile2Ref} />
+                        <input className="file-input" type="file" accept=".csv, .xlsx, .xls" onChange={(e) => handleFileChange(e, 'file2')} ref={monitorFile2Ref} />
                       </div>
                     </div>
                     <button id="tour-sa-scan-btn" className="btn primary-filled scan-btn full-width" onClick={handleScan} disabled={isLoading} style={{background: 'var(--brand-purple)', color: '#ffffff', border: 'none', marginTop: '10px', padding: '12px', outline: 'none', transform: dashboardMode === 'transport' ? 'translateY(-4px)' : 'translateY(0)', transition: 'transform 0.55s cubic-bezier(0.22, 1, 0.36, 1)', willChange: 'transform' }}>

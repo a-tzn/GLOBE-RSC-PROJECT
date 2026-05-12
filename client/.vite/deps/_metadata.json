@@ -1,0 +1,91 @@
+{
+  "hash": "e2b5b6e5",
+  "configHash": "f2f50767",
+  "lockfileHash": "e16eeb51",
+  "browserHash": "38bcbb88",
+  "optimized": {
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "ae46c8e8",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "ea4e492a",
+      "needsInterop": true
+    },
+    "react-router-dom": {
+      "src": "../../node_modules/react-router-dom/dist/index.mjs",
+      "file": "react-router-dom.js",
+      "fileHash": "844a72e6",
+      "needsInterop": false
+    },
+    "localforage": {
+      "src": "../../node_modules/localforage/dist/localforage.js",
+      "file": "localforage.js",
+      "fileHash": "2b2301a0",
+      "needsInterop": true
+    },
+    "recharts": {
+      "src": "../../node_modules/recharts/es6/index.js",
+      "file": "recharts.js",
+      "fileHash": "4fca8f5c",
+      "needsInterop": false
+    },
+    "@e965/xlsx": {
+      "src": "../../node_modules/@e965/xlsx/xlsx.mjs",
+      "file": "@e965_xlsx.js",
+      "fileHash": "949f49af",
+      "needsInterop": false
+    },
+    "driver.js": {
+      "src": "../../node_modules/driver.js/dist/driver.js.mjs",
+      "file": "driver__js.js",
+      "fileHash": "63905245",
+      "needsInterop": false
+    },
+    "react-window": {
+      "src": "../../node_modules/react-window/dist/react-window.js",
+      "file": "react-window.js",
+      "fileHash": "9ad3cbbc",
+      "needsInterop": false
+    },
+    "react-leaflet": {
+      "src": "../../node_modules/react-leaflet/lib/index.js",
+      "file": "react-leaflet.js",
+      "fileHash": "c3cbe0f1",
+      "needsInterop": false
+    },
+    "react-leaflet-cluster": {
+      "src": "../../node_modules/react-leaflet-cluster/dist/index.js",
+      "file": "react-leaflet-cluster.js",
+      "fileHash": "2e2a5bf7",
+      "needsInterop": false
+    },
+    "leaflet": {
+      "src": "../../node_modules/leaflet/dist/leaflet-src.js",
+      "file": "leaflet.js",
+      "fileHash": "15bdc429",
+      "needsInterop": true
+    }
+  },
+  "chunks": {
+    "chunk-YNGNFGK3": {
+      "file": "chunk-YNGNFGK3.js"
+    },
+    "chunk-DHUVTM67": {
+      "file": "chunk-DHUVTM67.js"
+    },
+    "chunk-UY4RL6HP": {
+      "file": "chunk-UY4RL6HP.js"
+    },
+    "chunk-IYNEFVZG": {
+      "file": "chunk-IYNEFVZG.js"
+    },
+    "chunk-PR4QN5HX": {
+      "file": "chunk-PR4QN5HX.js"
+    }
+  }
+}
