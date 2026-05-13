@@ -32,7 +32,7 @@ function promisifyGasCall(functionName, ...args) {
 
 // DEVELOPMENT API ENDPOINTS
 // In local dev, prefer Vite proxy (/api/gas) to avoid browser CORS issues.
-const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbyL1kgGWmCcqyn8B0f0JVwnYgc1qqXkN3MZ9Gt2yWUQz24q-xvi5HmN3IEd8CPZHD5l3Q/exec';
+const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbzhr0cKxXj09k1LkrqjS7cX51yfFMzwuw_RwCJQqI7bRCd7GTzD5BbLI-m6ek3sqm6aRA/exec';
 const API_BASE_URL = import.meta.env.VITE_GAS_API_URL || DEFAULT_GAS_URL;
 const API_DEV_PROXY_PATH = import.meta.env.VITE_GAS_DEV_PROXY_PATH || '/api/gas';
 const FORCE_DIRECT_GAS = String(import.meta.env.VITE_GAS_FORCE_DIRECT || '').toLowerCase() === 'true';
