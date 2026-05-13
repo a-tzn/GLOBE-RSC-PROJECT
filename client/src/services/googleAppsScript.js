@@ -30,9 +30,76 @@ function promisifyGasCall(functionName, ...args) {
   });
 }
 
+function getSystemType(dataType) {
+  const dt = String(dataType || '').toUpperCase();
+  return (dt === 'WIRELESS' || dt === 'TRANSPORT' || dt === 'SA') ? 'SA' : 'SM';
+}
+
+function runGasAction(payload) {
+  switch (payload?.action) {
+    case 'storeData':
+      return promisifyGasCall(
+        'storeUploadedData',
+        payload.fileName,
+        payload.dataType,
+        payload.rawData,
+        payload.processedData,
+        payload.metadata,
+        payload.authContext
+      );
+
+    case 'getDataSummary':
+      return promisifyGasCall(
+        'getUserUploadedDataSummary',
+        payload.limit,
+        payload.dataType,
+        payload.includeAll,
+        payload.authContext
+      );
+
+    case 'getDataById':
+      return promisifyGasCall(
+        'getUploadedDataById',
+        payload.dataId,
+        payload.includeAll,
+        payload.dataType,
+        payload.authContext
+      );
+
+    case 'getLatestData':
+      return promisifyGasCall('getLatestUserUploadedData', payload.dataType, payload.authContext);
+
+    case 'deleteData':
+      return promisifyGasCall(
+        'deleteUploadedData',
+        getSystemType(payload.dataType),
+        payload.dataId,
+        payload.authContext
+      );
+
+    case 'getUserInfo':
+      return promisifyGasCall('getUserInfo', payload.authContext);
+
+    case 'getTourStatus':
+      return promisifyGasCall('getTourStatus', payload.authContext);
+
+    case 'completeTour':
+      return promisifyGasCall('completeUserTour', payload.authContext, payload.tourType);
+
+    case 'getLastModified':
+      return promisifyGasCall('getLastModifiedInfo', payload.dataType || '');
+
+    case 'initialize':
+      return promisifyGasCall('initializeSpreadsheet');
+
+    default:
+      return Promise.reject(new Error(`Unsupported GAS action: ${payload?.action || 'unknown'}`));
+  }
+}
+
 // DEVELOPMENT API ENDPOINTS
 // In local dev, prefer Vite proxy (/api/gas) to avoid browser CORS issues.
-const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbyL1kgGWmCcqyn8B0f0JVwnYgc1qqXkN3MZ9Gt2yWUQz24q-xvi5HmN3IEd8CPZHD5l3Q/exec';
+const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbzhr0cKxXj09k1LkrqjS7cX51yfFMzwuw_RwCJQqI7bRCd7GTzD5BbLI-m6ek3sqm6aRA/exec';
 const API_BASE_URL = import.meta.env.VITE_GAS_API_URL || DEFAULT_GAS_URL;
 const API_DEV_PROXY_PATH = import.meta.env.VITE_GAS_DEV_PROXY_PATH || '/api/gas';
 const FORCE_DIRECT_GAS = String(import.meta.env.VITE_GAS_FORCE_DIRECT || '').toLowerCase() === 'true';
@@ -99,14 +166,7 @@ function writeCachedUserInfoInternal(userData) {
   }
 }
 
-async function postApi(payload) {
-  const shouldUseDevProxy = import.meta.env.DEV && !FORCE_DIRECT_GAS;
-  const endpoint = shouldUseDevProxy ? API_DEV_PROXY_PATH : API_BASE_URL;
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
+async function parseGasResponse(response, endpoint) {
   const raw = await response.text();
 
   if (!raw || !raw.trim()) {
@@ -131,6 +191,52 @@ async function postApi(payload) {
   }
 
   return data;
+}
+
+function createGasFetchOptions(payload, useSimpleContentType = false) {
+  const headers = useSimpleContentType
+    ? { 'Content-Type': 'text/plain;charset=UTF-8' }
+    : { 'Content-Type': 'application/json' };
+
+  return {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(payload)
+  };
+}
+
+async function fetchGasApi(endpoint, payload, useSimpleContentType) {
+  const response = await fetch(endpoint, createGasFetchOptions(payload, useSimpleContentType));
+  return parseGasResponse(response, endpoint);
+}
+
+export async function postGasApi(payload) {
+  const runner = getGoogleScriptRunner();
+  if (runner) {
+    return runGasAction(payload);
+  }
+
+  const shouldUseDevProxy = import.meta.env.DEV && !FORCE_DIRECT_GAS;
+  const endpoint = shouldUseDevProxy ? API_DEV_PROXY_PATH : API_BASE_URL;
+
+  // Direct Apps Script calls should avoid JSON content-type because it triggers
+  // a browser preflight that GAS web apps usually cannot answer with CORS headers.
+  const attempts = shouldUseDevProxy ? [false, true] : [true, false];
+  let lastError = null;
+
+  for (const useSimpleContentType of attempts) {
+    try {
+      return await fetchGasApi(endpoint, payload, useSimpleContentType);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError;
+}
+
+async function postApi(payload) {
+  return postGasApi(payload);
 }
 
 /**
@@ -324,6 +430,65 @@ export function getLastModifiedInfo(dataType = '') {
   });
 }
 
+/**
+ * Get the tour status
+ */
+export function getTourStatus(authContext) {
+  const runner = getGoogleScriptRunner();
+  if (runner) {
+    return promisifyGasCall('getTourStatus', authContext)
+      .then((result) => {
+        if (!result?.success) throw new Error(result?.error || 'Failed to get tour status');
+        return result.data;
+      });
+  }
+
+  return postApi({
+    action: 'getTourStatus',
+    authContext
+  }).then((data) => {
+    if (!data?.success) throw new Error(data?.error || 'Failed to get tour status');
+    return data.data;
+  });
+}
+
+/**
+ * Complete a specific tour
+ */
+export function completeTour(authContext, tourType) {
+  const runner = getGoogleScriptRunner();
+  if (runner) {
+    return promisifyGasCall('completeUserTour', authContext, tourType)
+      .then((result) => {
+        if (!result?.success) throw new Error(result?.error || 'Failed to complete tour');
+        return result.data;
+      });
+  }
+
+  return postApi({
+    action: 'completeTour',
+    authContext,
+    tourType
+  }).then((data) => {
+    if (!data?.success) throw new Error(data?.error || 'Failed to complete tour');
+    return data.data;
+  });
+}
+
+/**
+ * Initialize Spreadsheet
+ */
+export function initializeSpreadsheet() {
+  const runner = getGoogleScriptRunner();
+  if (runner) {
+    return promisifyGasCall('initializeSpreadsheet');
+  }
+
+  return postApi({
+    action: 'initialize'
+  });
+}
+
 // --- LEGACY FUNCTIONS (for backward compatibility) ---
 
 export function processCSVComparisonRemote(file1Text, file2Text) {
@@ -374,5 +539,8 @@ export function processAIAgentCommandRemote(userMessage, dataString) {
 export default {
   hasGoogleScriptRuntime,
   processCSVComparisonRemote,
-  processAIAgentCommandRemote
+  processAIAgentCommandRemote,
+  getTourStatus,
+  completeTour,
+  initializeSpreadsheet
 };

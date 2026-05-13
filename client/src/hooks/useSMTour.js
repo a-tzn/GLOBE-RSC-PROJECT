@@ -2,23 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import '../styles/driver-premium.css';
-
-const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbyL1kgGWmCcqyn8B0f0JVwnYgc1qqXkN3MZ9Gt2yWUQz24q-xvi5HmN3IEd8CPZHD5l3Q/exec';
-const API_BASE_URL = import.meta.env.VITE_GAS_API_URL || DEFAULT_GAS_URL;
-const API_DEV_PROXY_PATH = import.meta.env.VITE_GAS_DEV_PROXY_PATH || '/api/gas';
-const FORCE_DIRECT_GAS = String(import.meta.env.VITE_GAS_FORCE_DIRECT || '').toLowerCase() === 'true';
+import { postGasApi } from '../services/googleAppsScript';
 
 async function postTourAction(payload) {
-  const shouldUseDevProxy = import.meta.env.DEV && !FORCE_DIRECT_GAS;
-  const endpoint = shouldUseDevProxy ? API_DEV_PROXY_PATH : API_BASE_URL;
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-  const data = await response.json();
-  if (!response.ok || !data?.success) {
-    throw new Error(data?.error || `Tour request failed (${response.status})`);
+  const data = await postGasApi(payload);
+  if (!data?.success) {
+    throw new Error(data?.error || 'Tour request failed');
   }
   return data;
 }
